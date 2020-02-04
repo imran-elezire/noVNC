@@ -17,8 +17,24 @@
         html {
             height: 100%;
         }
+
+        #top_bar {
+            background-color: #6e84a3;
+            color: white;
+            font: bold 12px Helvetica;
+            padding: 6px 5px 4px 5px;
+            border-bottom: 1px outset;
+        }
         #status {
             text-align: center;
+        }
+        #sendCtrlAltDelButton {
+            position: fixed;
+            top: 0px;
+            right: 0px;
+            border: 1px outset;
+            padding: 5px 5px 4px 5px;
+            cursor: pointer;
         }
 
         #screen {
@@ -28,13 +44,13 @@
 
     </style>
 
-
+    <!-- Promise polyfill for IE11 -->
     <script src="scripts/promise.js"></script>
 
-
+    <!-- ES2015/ES6 modules polyfill -->
     <script nomodule src="scripts/browser-es-module-loader.js"></script>
 
- 
+    <!-- actual script modules -->
     <script type="module" crossorigin="anonymous">
         // RFB holds the API to connect and communicate with a VNC server
         import RFB from './core/rfb.js';
@@ -70,6 +86,13 @@
             desktopName = e.detail.name;
         }
 
+        // Since most operating systems will catch Ctrl+Alt+Del
+        // before they get a chance to be intercepted by the browser,
+        // we provide a way to emulate this key sequence.
+        function sendCtrlAltDel() {
+            rfb.sendCtrlAltDel();
+            return false;
+        }
 
         // Show a status text in the top bar
         function status(text) {
@@ -96,10 +119,19 @@
             return defaultValue;
         }
 
+        document.getElementById('sendCtrlAltDelButton')
+            .onclick = sendCtrlAltDel;
+
+        // Read parameters specified in the URL query string
+        // By default, use the host and port of server that served this file
         const host = readQueryVariable('host', window.location.hostname);
         let port = readQueryVariable('port', window.location.port);
         const password = readQueryVariable('password');
         const path = readQueryVariable('path', 'websockify');
+
+        // | | |         | | |
+        // | | | Connect | | |
+        // v v v         v v v
 
         status("Connecting");
 
@@ -120,18 +152,23 @@
         rfb = new RFB(document.getElementById('screen'), url,
                       { credentials: { password: password } });
 
-    
+        // Add listeners to important events from the RFB module
         rfb.addEventListener("connect",  connectedToServer);
         rfb.addEventListener("disconnect", disconnectedFromServer);
         rfb.addEventListener("credentialsrequired", credentialsAreRequired);
         rfb.addEventListener("desktopname", updateDesktopName);
 
+        // Set parameters that can be changed on an active connection
         rfb.viewOnly = readQueryVariable('view_only', false);
         rfb.scaleViewport = readQueryVariable('scale', false);
     </script>
 </head>
 
 <body>
+    <div id="top_bar">
+        <div id="status">Loading</div>
+        
+    </div>
     <div id="screen">
         <!-- This is where the remote screen will appear -->
     </div>
